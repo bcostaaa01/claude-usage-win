@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claude-usage-tray"
+version = "0.1.0"
+description = "Windows system tray icon showing your Claude plan usage, what's left, and when it resets."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = [
+    "pystray>=0.19.5",
+    "Pillow>=10.0.0",
+]
+
+[project.gui-scripts]
+claude-usage-tray = "claude_usage_tray.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
