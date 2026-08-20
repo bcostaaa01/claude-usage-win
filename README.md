@@ -6,6 +6,8 @@ your session/weekly limit you've used, and when it resets.
 
 ![status](https://img.shields.io/badge/status-early-blue)
 
+![Dashboard flyout showing Claude Pro session and weekly usage](widget.png)
+
 It reads the OAuth login that [Claude Code](https://claude.com/product/claude-code)
 already stores on your machine after you sign in, and polls the same
 usage endpoint Claude Code's own status line uses. No API key, no extra
