@@ -11,16 +11,20 @@ already stores on your machine after you sign in, and polls the same
 usage endpoint Claude Code's own status line uses. No API key, no extra
 login, no data leaves your machine except the request to Anthropic itself.
 
-## What you get (v0.1 — basic)
+## What you get (v0.2)
 
 - A ring-gauge tray icon, color-coded green → yellow → red as you approach
   your limit.
-- Right-click it for the full breakdown: session (5h) and weekly (7d) usage
-  percentages, plus when each resets.
-- Hover it for a quick tooltip summary.
-- Auto-refreshes every 5 minutes; "Refresh now" in the menu forces one.
+- **Left-click** it (like OneDrive/Dropbox) to pop a small dark dashboard
+  card above the tray with session (5h) and weekly (7d) usage bars, percent
+  used, and countdowns to reset. Click again, press Esc, or click elsewhere
+  to dismiss it.
+- **Right-click** it for a native quick menu: Open dashboard, Refresh now, Quit
+  — Win32 tray menus can't be styled, so the detail lives in the dashboard.
+- Hover it for a one-line tooltip summary.
+- Auto-refreshes every 5 minutes in the background; "Refresh" forces one.
 
-Not in v0.1 yet: desktop notifications near the limit, historical charts,
+Not in yet: desktop notifications near the limit, historical charts,
 non-Windows tray support. See [Roadmap](#roadmap).
 
 ## Requirements
@@ -44,8 +48,8 @@ python -m venv .venv
 
 That last command launches the app with no console window — look for the
 new icon in your system tray (bottom-right of the taskbar; click the `^`
-arrow if it's hidden in the overflow list). Right-click it for usage
-details and Quit; left-click/hover for the quick summary.
+arrow if it's hidden in the overflow list). Left-click for the dashboard,
+right-click for the quick menu.
 
 ## Run it automatically at sign-in
 

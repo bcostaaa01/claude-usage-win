@@ -4,22 +4,10 @@ from __future__ import annotations
 
 from PIL import Image, ImageDraw
 
+from . import colors
+
 SIZE = 64
 _STROKE = 8
-
-_COLOR_OK = (60, 170, 90, 255)
-_COLOR_WARN = (230, 165, 30, 255)
-_COLOR_CRIT = (215, 60, 60, 255)
-_COLOR_TRACK = (120, 120, 120, 90)
-_COLOR_ERROR = (140, 140, 140, 255)
-
-
-def _color_for(pct: float) -> tuple[int, int, int, int]:
-    if pct >= 90:
-        return _COLOR_CRIT
-    if pct >= 70:
-        return _COLOR_WARN
-    return _COLOR_OK
 
 
 def render_gauge(pct: float) -> Image.Image:
@@ -30,14 +18,14 @@ def render_gauge(pct: float) -> Image.Image:
     draw = ImageDraw.Draw(img)
     bbox = (_STROKE, _STROKE, SIZE - _STROKE, SIZE - _STROKE)
 
-    draw.ellipse(bbox, outline=_COLOR_TRACK, width=_STROKE)
+    draw.ellipse(bbox, outline=colors.TRACK_RGBA, width=_STROKE)
     if pct > 0:
         sweep = 360 * (pct / 100)
-        draw.arc(bbox, start=-90, end=-90 + sweep, fill=_color_for(pct), width=_STROKE)
+        draw.arc(bbox, start=-90, end=-90 + sweep, fill=colors.rgba_for(pct), width=_STROKE)
     return img
 
 
-def render_placeholder(color: tuple[int, int, int, int] = _COLOR_ERROR) -> Image.Image:
+def render_placeholder(color: tuple[int, int, int, int] = colors.ERROR_RGBA) -> Image.Image:
     """Shown when usage can't be fetched yet (no data, error, etc.)."""
 
     img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
