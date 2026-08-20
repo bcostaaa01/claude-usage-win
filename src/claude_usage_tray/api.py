@@ -80,7 +80,12 @@ def fetch_usage(creds: Credentials) -> UsageSnapshot:
             body = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         if exc.code == 429:
-            raise UsageRequestError("Rate limited by Anthropic's usage endpoint.", rate_limited=True) from exc
+            raise UsageRequestError(
+                "Anthropic is rate-limiting usage checks right now. This should "
+                "clear on its own in a few minutes -- avoid refreshing repeatedly "
+                "in the meantime.",
+                rate_limited=True,
+            ) from exc
         if exc.code in (401, 403):
             raise UsageRequestError(
                 "Not authorized -- your Claude Code login may have expired. "

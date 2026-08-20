@@ -37,6 +37,11 @@ MAX_BACKOFF_SECONDS = 20 * 60
 QUEUE_POLL_MS = 150
 APP_NAME = "Claude Usage"
 
+# Windows' Shell_NotifyIcon tooltip buffer is capped at 128 characters --
+# pystray raises ValueError past that, so error messages (which can be long
+# and descriptive in the dashboard) get truncated before going in the title.
+MAX_TRAY_TITLE_CHARS = 120
+
 
 def _cursor_pos() -> tuple[int, int]:
     pt = wintypes.POINT()
@@ -130,6 +135,11 @@ class TrayApp:
             pass
         self.dashboard.root.after(QUEUE_POLL_MS, self._pump_queue)
 
+    def _set_icon_title(self, text: str) -> None:
+        if len(text) > MAX_TRAY_TITLE_CHARS:
+            text = text[: MAX_TRAY_TITLE_CHARS - 1] + "…"
+        self.icon.title = text
+
     def _apply_snapshot(self, snapshot: UsageSnapshot, plan: str) -> None:
         self.dashboard.set_snapshot(snapshot, plan)
 
@@ -141,12 +151,12 @@ class TrayApp:
 
         session_pct = round(snapshot.session.utilization_pct) if snapshot.session else "?"
         weekly_pct = round(snapshot.weekly.utilization_pct) if snapshot.weekly else "?"
-        self.icon.title = f"{plan} · Session {session_pct}% · Weekly {weekly_pct}%"
+        self._set_icon_title(f"{plan} · Session {session_pct}% · Weekly {weekly_pct}%")
 
     def _apply_error(self, message: str) -> None:
         self.dashboard.set_error(message)
         self.icon.icon = icon_mod.render_placeholder()
-        self.icon.title = f"{APP_NAME}: {message}"
+        self._set_icon_title(f"{APP_NAME}: {message}")
 
     def run(self) -> None:
         threading.Thread(target=self._poll_loop, name="usage-poller", daemon=True).start()

@@ -8,6 +8,7 @@ the same way OneDrive/Dropbox pop a small panel above their tray icon.
 
 from __future__ import annotations
 
+import time
 import tkinter as tk
 from typing import Callable
 
@@ -62,6 +63,11 @@ class Dashboard:
 
     _MAGIC = "#ff00fe"  # chroma-key color -> made transparent for rounded corners
 
+    # Anthropic's usage endpoint isn't a public API and is known to lock out
+    # hard -- and not recover -- if polled too aggressively, so manual
+    # refreshes are throttled client-side well before that can happen.
+    MIN_REFRESH_INTERVAL_SECONDS = 30
+
     def __init__(self, *, on_refresh: Callable[[], None], on_quit: Callable[[], None]):
         self._on_refresh = on_refresh
         self._on_quit = on_quit
@@ -73,6 +79,8 @@ class Dashboard:
         self._spin_angle = 0
         self._spin_job: str | None = None
         self._spinner_item: int | None = None
+        self._cooldown_until = 0.0
+        self._cooldown_job: str | None = None
 
         display_dpi = dpi.get_dpi()
         self.scale = display_dpi / dpi.BASELINE_DPI
@@ -159,10 +167,10 @@ class Dashboard:
         self._error = message
         self._render()
 
-    # -- manual refresh spinner --------------------------------------------
+    # -- manual refresh: spinner + cooldown ---------------------------------
 
     def _start_refresh(self) -> None:
-        if self._loading:
+        if self._loading or time.monotonic() < self._cooldown_until:
             return
         self._loading = True
         self._spin_angle = 0
@@ -178,11 +186,25 @@ class Dashboard:
         self._spin_job = self.root.after(60, self._tick_spinner)
 
     def _stop_spinner(self) -> None:
+        was_manual_refresh = self._loading
         self._loading = False
         self._spinner_item = None
         if self._spin_job is not None:
             self.root.after_cancel(self._spin_job)
             self._spin_job = None
+        if was_manual_refresh:
+            self._start_cooldown()
+
+    def _start_cooldown(self) -> None:
+        self._cooldown_until = time.monotonic() + self.MIN_REFRESH_INTERVAL_SECONDS
+        self._tick_cooldown()
+
+    def _tick_cooldown(self) -> None:
+        self._render()
+        if time.monotonic() >= self._cooldown_until:
+            self._cooldown_job = None
+            return
+        self._cooldown_job = self.root.after(1000, self._tick_cooldown)
 
     # -- visibility -------------------------------------------------------
 
@@ -254,6 +276,12 @@ class Dashboard:
                 cx - r, cy - r, cx + r, cy + r,
                 start=self._spin_angle, extent=270, style="arc",
                 outline=_LINK_REFRESH, width=max(self._s(2), 2),
+            )
+        elif time.monotonic() < self._cooldown_until:
+            remaining = max(1, round(self._cooldown_until - time.monotonic()))
+            c.create_text(
+                x2 - pad - self._s(38), footer_y, anchor="se", text=f"Wait {remaining}s",
+                fill=_FG_FAINT, font=(_FONT, 9),
             )
         else:
             refresh = c.create_text(

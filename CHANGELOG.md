@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/) once it
 reaches 1.0.
 
+## [0.2.4] - 2026-08-20
+
+### Added
+
+- A 30-second cooldown on manual Refresh clicks, shown as a "Wait Ns"
+  countdown in place of the link. Anthropic's usage endpoint isn't a public
+  API and is known to lock out hard — and not recover for the rest of the
+  session — if polled too aggressively, so this stops click-spam before it
+  can trigger that.
+
+### Changed
+
+- Clearer message when Anthropic does rate-limit a usage check: explains
+  what happened and that it clears on its own, instead of a bare "rate
+  limited" line.
+
+### Fixed
+
+- Tray tooltip crash when an error message was long enough to exceed
+  Windows' 128-character `Shell_NotifyIcon` tooltip limit (hit for real by
+  the friendlier rate-limit message above). Titles now truncate safely
+  before being handed to the OS.
+
 ## [0.2.3] - 2026-08-20
 
 ### Added
