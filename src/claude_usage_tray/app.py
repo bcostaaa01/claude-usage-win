@@ -18,6 +18,7 @@ import logging
 import queue
 import threading
 from ctypes import wintypes
+from datetime import datetime
 
 import pystray
 from pystray import MenuItem as Item
@@ -65,6 +66,8 @@ class TrayApp:
 
         self._notified_session = False
         self._notified_weekly = False
+        self._last_reset_at_session: datetime | None = None
+        self._last_reset_at_weekly: datetime | None = None
 
         self.dashboard = Dashboard(on_refresh=self._request_refresh, on_quit=self._request_quit)
 
@@ -165,6 +168,8 @@ class TrayApp:
 
         self._check_threshold("session", "Session (5h)", snapshot.session)
         self._check_threshold("weekly", "Weekly (7d)", snapshot.weekly)
+        self._check_reset("session", "Session (5h)", snapshot.session)
+        self._check_reset("weekly", "Weekly (7d)", snapshot.weekly)
 
     def _apply_error(self, message: str) -> None:
         self.dashboard.set_error(message)
@@ -192,6 +197,28 @@ class TrayApp:
         self._send_notification(
             title="Claude usage nearly maxed out",
             message=f"{label} is at {round(pct)}% -- you're close to the limit.",
+        )
+
+    # -- reset notifications -----------------------------------------------
+
+    def _check_reset(self, kind: str, label: str, window: Window | None) -> None:
+        """Fires a toast once the window's resets_at moves to a later
+        timestamp than the last one seen -- i.e. the window actually rolled
+        over -- not on the first snapshot ever (nothing to compare against
+        yet) and not repeatedly while resets_at stays the same."""
+
+        attr = f"_last_reset_at_{kind}"
+        if window is None or window.resets_at is None:
+            return
+        previous = getattr(self, attr)
+        if previous is not None and window.resets_at > previous:
+            self._notify_reset(label)
+        setattr(self, attr, window.resets_at)
+
+    def _notify_reset(self, label: str) -> None:
+        self._send_notification(
+            title="Claude usage reset 🥳",
+            message=f"{label} is back to 0% -- fresh quota to use.",
         )
 
     def _send_notification(self, title: str, message: str) -> None:

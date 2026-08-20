@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/) once it
 reaches 1.0.
 
+## [0.3.1] - 2026-08-20
+
+### Added
+
+- Windows toast notification ("Claude usage reset 🥳") when a session or
+  weekly window actually rolls over, detected by its `resets_at` timestamp
+  advancing past the last one seen. Fires once per rollover.
+
 ## [0.3.0] - 2026-08-20
 
 ### Added

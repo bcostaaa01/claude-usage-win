@@ -24,7 +24,8 @@ login, no data leaves your machine except the request to Anthropic itself.
   (Win32 tray context menus can't be styled at all, so there's no separate
   plain-text menu to click through first.)
 - A Windows toast notification when session or weekly usage crosses 95%,
-  once per crossing (not spammed every poll).
+  once per crossing (not spammed every poll) -- and another, celebratory
+  one ("Claude usage reset 🥳") the moment a window actually rolls over.
 - Hover it for a one-line tooltip summary.
 - Auto-refreshes every 5 minutes in the background; "Refresh" forces one.
 
