@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/) once it
 reaches 1.0.
 
+## [0.3.0] - 2026-08-20
+
+### Added
+
+- Windows toast notification when session (5h) or weekly (7d) usage crosses
+  95%. Fires once per crossing rather than on every poll while it stays
+  above the threshold, and re-arms once usage drops back below 95% (e.g.
+  after the window resets).
+
 ## [0.2.4] - 2026-08-20
 
 ### Added

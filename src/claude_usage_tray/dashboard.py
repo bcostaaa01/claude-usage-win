@@ -68,7 +68,12 @@ class Dashboard:
     # refreshes are throttled client-side well before that can happen.
     MIN_REFRESH_INTERVAL_SECONDS = 30
 
-    def __init__(self, *, on_refresh: Callable[[], None], on_quit: Callable[[], None]):
+    def __init__(
+        self,
+        *,
+        on_refresh: Callable[[], None],
+        on_quit: Callable[[], None],
+    ):
         self._on_refresh = on_refresh
         self._on_quit = on_quit
         self._snapshot: UsageSnapshot | None = None
@@ -259,6 +264,7 @@ class Dashboard:
             self._draw_metric(c, x1 + pad, y, x2 - pad, "Weekly (7d)", self._snapshot.weekly)
 
         footer_y = y2 - pad
+
         updated = ""
         if self._snapshot is not None:
             updated = f"Updated {self._snapshot.fetched_at.astimezone().strftime('%H:%M:%S')}"

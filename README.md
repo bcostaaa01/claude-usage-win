@@ -13,7 +13,7 @@ already stores on your machine after you sign in, and polls the same
 usage endpoint Claude Code's own status line uses. No API key, no extra
 login, no data leaves your machine except the request to Anthropic itself.
 
-## What you get (v0.2)
+## What you get (v0.3)
 
 - A ring-gauge tray icon, color-coded green → yellow → red as you approach
   your limit.
@@ -23,11 +23,12 @@ login, no data leaves your machine except the request to Anthropic itself.
   Quit links. Click again, press Esc, or click elsewhere to dismiss it.
   (Win32 tray context menus can't be styled at all, so there's no separate
   plain-text menu to click through first.)
+- A Windows toast notification when session or weekly usage crosses 95%,
+  once per crossing (not spammed every poll).
 - Hover it for a one-line tooltip summary.
 - Auto-refreshes every 5 minutes in the background; "Refresh" forces one.
 
-Not in yet: desktop notifications near the limit, historical charts,
-non-Windows tray support. See [Roadmap](#roadmap).
+Not in yet: historical charts, non-Windows tray support. See [Roadmap](#roadmap).
 
 ## Requirements
 
@@ -87,7 +88,6 @@ gracefully (it'll show an error in the dashboard) if that happens.
 
 ## Roadmap
 
-- [ ] Desktop toast notification when a window crosses a threshold (e.g. 90%).
 - [ ] Percentage-as-text icon variant for high-DPI trays.
 - [ ] Packaged `.exe` (PyInstaller) so Python isn't a prerequisite.
 - [ ] macOS/Linux tray support (pystray already supports both backends).

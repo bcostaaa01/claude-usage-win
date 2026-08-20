@@ -23,7 +23,7 @@ import pystray
 from pystray import MenuItem as Item
 
 from . import dpi, icon as icon_mod
-from .api import UsageRequestError, UsageSnapshot, fetch_usage
+from .api import UsageRequestError, UsageSnapshot, Window, fetch_usage
 from .credentials import CredentialsError, load_credentials
 from .dashboard import Dashboard
 from .formatting import plan_label
@@ -42,6 +42,13 @@ APP_NAME = "Claude Usage"
 # and descriptive in the dashboard) get truncated before going in the title.
 MAX_TRAY_TITLE_CHARS = 120
 
+# Same buffer-limit story for balloon/toast notifications: szInfo is a
+# WCHAR[256] and szInfoTitle a WCHAR[64] in NOTIFYICONDATAW.
+MAX_NOTIFY_TITLE_CHARS = 60
+MAX_NOTIFY_MESSAGE_CHARS = 250
+
+NOTIFY_THRESHOLD_PCT = 95
+
 
 def _cursor_pos() -> tuple[int, int]:
     pt = wintypes.POINT()
@@ -55,6 +62,9 @@ class TrayApp:
         self._stop_event = threading.Event()
         self._refresh_event = threading.Event()
         self._queue: queue.Queue = queue.Queue()
+
+        self._notified_session = False
+        self._notified_weekly = False
 
         self.dashboard = Dashboard(on_refresh=self._request_refresh, on_quit=self._request_quit)
 
@@ -153,10 +163,46 @@ class TrayApp:
         weekly_pct = round(snapshot.weekly.utilization_pct) if snapshot.weekly else "?"
         self._set_icon_title(f"{plan} · Session {session_pct}% · Weekly {weekly_pct}%")
 
+        self._check_threshold("session", "Session (5h)", snapshot.session)
+        self._check_threshold("weekly", "Weekly (7d)", snapshot.weekly)
+
     def _apply_error(self, message: str) -> None:
         self.dashboard.set_error(message)
         self.icon.icon = icon_mod.render_placeholder()
         self._set_icon_title(f"{APP_NAME}: {message}")
+
+    # -- 95% usage notifications ------------------------------------------
+
+    def _check_threshold(self, kind: str, label: str, window: Window | None) -> None:
+        """Fires a toast once per crossing into >=95% -- not on every poll
+        while it stays there -- and re-arms once usage drops back below the
+        threshold (e.g. after the window resets)."""
+
+        flag_attr = f"_notified_{kind}"
+        if window is None:
+            return
+        if window.utilization_pct >= NOTIFY_THRESHOLD_PCT:
+            if not getattr(self, flag_attr):
+                setattr(self, flag_attr, True)
+                self._notify_threshold(label, window.utilization_pct)
+        else:
+            setattr(self, flag_attr, False)
+
+    def _notify_threshold(self, label: str, pct: float) -> None:
+        self._send_notification(
+            title="Claude usage nearly maxed out",
+            message=f"{label} is at {round(pct)}% -- you're close to the limit.",
+        )
+
+    def _send_notification(self, title: str, message: str) -> None:
+        if len(title) > MAX_NOTIFY_TITLE_CHARS:
+            title = title[: MAX_NOTIFY_TITLE_CHARS - 1] + "…"
+        if len(message) > MAX_NOTIFY_MESSAGE_CHARS:
+            message = message[: MAX_NOTIFY_MESSAGE_CHARS - 1] + "…"
+        try:
+            self.icon.notify(message, title)
+        except Exception:
+            log.warning("failed to show notification", exc_info=True)
 
     def run(self) -> None:
         threading.Thread(target=self._poll_loop, name="usage-poller", daemon=True).start()
