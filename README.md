@@ -92,6 +92,10 @@ gracefully (it'll show an error in the dashboard) if that happens.
 - [ ] Packaged `.exe` (PyInstaller) so Python isn't a prerequisite.
 - [ ] macOS/Linux tray support (pystray already supports both backends).
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md), or the [Releases](../../releases) page.
+
 ## Contributing
 
 Issues and PRs welcome — this is intentionally a small, basic first version.
