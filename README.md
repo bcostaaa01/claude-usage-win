@@ -15,12 +15,12 @@ login, no data leaves your machine except the request to Anthropic itself.
 
 - A ring-gauge tray icon, color-coded green → yellow → red as you approach
   your limit.
-- **Left-click** it (like OneDrive/Dropbox) to pop a small dark dashboard
-  card above the tray with session (5h) and weekly (7d) usage bars, percent
-  used, and countdowns to reset. Click again, press Esc, or click elsewhere
-  to dismiss it.
-- **Right-click** it for a native quick menu: Open dashboard, Refresh now, Quit
-  — Win32 tray menus can't be styled, so the detail lives in the dashboard.
+- **Click it — either button** (like OneDrive/battery/volume/network) to pop
+  a small dark dashboard card above the tray with session (5h) and weekly
+  (7d) usage bars, percent used, and countdowns to reset, plus Refresh and
+  Quit links. Click again, press Esc, or click elsewhere to dismiss it.
+  (Win32 tray context menus can't be styled at all, so there's no separate
+  plain-text menu to click through first.)
 - Hover it for a one-line tooltip summary.
 - Auto-refreshes every 5 minutes in the background; "Refresh" forces one.
 
@@ -48,8 +48,8 @@ python -m venv .venv
 
 That last command launches the app with no console window — look for the
 new icon in your system tray (bottom-right of the taskbar; click the `^`
-arrow if it's hidden in the overflow list). Left-click for the dashboard,
-right-click for the quick menu.
+arrow if it's hidden in the overflow list). Click it (either button) to
+open the dashboard.
 
 ## Run it automatically at sign-in
 
@@ -81,7 +81,7 @@ and draws the result as a tray icon instead. See
 
 This endpoint is **not officially documented or supported** — Anthropic
 could change or remove it at any time, and this tool will start failing
-gracefully (it'll show an error in the tray menu) if that happens.
+gracefully (it'll show an error in the dashboard) if that happens.
 
 ## Roadmap
 

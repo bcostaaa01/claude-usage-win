@@ -27,6 +27,7 @@ from .api import UsageRequestError, UsageSnapshot, fetch_usage
 from .credentials import CredentialsError, load_credentials
 from .dashboard import Dashboard
 from .formatting import plan_label
+from .winicon import ClickIcon
 
 log = logging.getLogger(__name__)
 
@@ -52,13 +53,12 @@ class TrayApp:
 
         self.dashboard = Dashboard(on_refresh=self._request_refresh, on_quit=self._request_quit)
 
-        menu = pystray.Menu(
-            Item("Open dashboard", self._on_open_clicked, default=True),
-            Item("Refresh now", self._on_refresh_clicked),
-            pystray.Menu.SEPARATOR,
-            Item("Quit", self._on_quit_clicked),
-        )
-        self.icon = pystray.Icon(
+        # ClickIcon routes both left- and right-click to this single default
+        # item, so the dashboard opens on any click -- Refresh/Quit live as
+        # links inside the dashboard itself (see dashboard.py) rather than in
+        # a native popup menu the user would have to click through.
+        menu = pystray.Menu(Item("Open dashboard", self._on_open_clicked, default=True))
+        self.icon = ClickIcon(
             "claude-usage-tray",
             icon=icon_mod.render_placeholder(),
             title=APP_NAME,
@@ -69,12 +69,6 @@ class TrayApp:
 
     def _on_open_clicked(self, _icon=None, _item=None) -> None:
         self._queue.put(("show", _cursor_pos()))
-
-    def _on_refresh_clicked(self, _icon=None, _item=None) -> None:
-        self._request_refresh()
-
-    def _on_quit_clicked(self, _icon=None, _item=None) -> None:
-        self._request_quit()
 
     def _request_refresh(self) -> None:
         self._refresh_event.set()
