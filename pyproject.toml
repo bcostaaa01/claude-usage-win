@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "claude-usage-tray"
-version = "0.2.1"
+version = "0.2.2"
 description = "Windows system tray icon showing your Claude plan usage, what's left, and when it resets."
 readme = "README.md"
 license = { text = "MIT" }

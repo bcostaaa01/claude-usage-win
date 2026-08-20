@@ -22,7 +22,7 @@ from ctypes import wintypes
 import pystray
 from pystray import MenuItem as Item
 
-from . import icon as icon_mod
+from . import dpi, icon as icon_mod
 from .api import UsageRequestError, UsageSnapshot, fetch_usage
 from .credentials import CredentialsError, load_credentials
 from .dashboard import Dashboard
@@ -156,5 +156,6 @@ class TrayApp:
 
 
 def main() -> None:
+    dpi.enable()  # must run before any window (pystray's or Tk's) is created
     logging.basicConfig(level=logging.WARNING)
     TrayApp().run()

@@ -11,7 +11,7 @@ from __future__ import annotations
 import tkinter as tk
 from typing import Callable
 
-from . import colors
+from . import colors, dpi
 from .api import UsageSnapshot, Window
 from .formatting import format_clock, format_countdown
 
@@ -49,12 +49,14 @@ def _rounded_rect(canvas: tk.Canvas, x1, y1, x2, y2, radius, **kwargs):
 
 class Dashboard:
     """Owns the Tk root. Must only be touched from the thread running
-    ``root.mainloop()`` (see app.py's queue-pump pattern)."""
+    ``root.mainloop()`` (see app.py's queue-pump pattern).
 
-    WIDTH = 300
-    HEIGHT = 224
-    MARGIN = 10
-    RADIUS = 16
+    All layout numbers below are logical (96-DPI) pixels; :meth:`_s` scales
+    them to the real display DPI so the card renders crisp -- rather than
+    stretched/blurry -- at 125%/150%/etc scaling. ``dpi.enable()`` must have
+    already run (app.py's ``main()`` does this) before this is constructed.
+    """
+
     _MAGIC = "#ff00fe"  # chroma-key color -> made transparent for rounded corners
 
     def __init__(self, *, on_refresh: Callable[[], None], on_quit: Callable[[], None]):
@@ -65,7 +67,15 @@ class Dashboard:
         self._error: str | None = None
         self._visible = False
 
+        display_dpi = dpi.get_dpi()
+        self.scale = display_dpi / dpi.BASELINE_DPI
+        self.WIDTH = self._s(300)
+        self.HEIGHT = self._s(224)
+        self.MARGIN = self._s(10)
+        self.RADIUS = self._s(16)
+
         self.root = tk.Tk()
+        self.root.tk.call("tk", "scaling", display_dpi / 72.0)
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
         self.root.configure(bg=self._MAGIC)
@@ -84,6 +94,10 @@ class Dashboard:
         )
         self.canvas.pack()
         self._render()
+
+    def _s(self, px: float) -> int:
+        """Scale a logical (96-DPI) pixel measurement to the real display."""
+        return round(px * self.scale)
 
     # -- state updates (call only from the Tk thread) --------------------
 
@@ -104,8 +118,8 @@ class Dashboard:
 
     def show(self, x: int, y: int) -> None:
         sw, sh = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
-        left = min(max(x - self.WIDTH + 40, 0), max(sw - self.WIDTH, 0))
-        top = min(max(y - self.HEIGHT - 12, 0), max(sh - self.HEIGHT, 0))
+        left = min(max(x - self.WIDTH + self._s(40), 0), max(sw - self.WIDTH, 0))
+        top = min(max(y - self.HEIGHT - self._s(12), 0), max(sh - self.HEIGHT, 0))
         self.root.geometry(f"{self.WIDTH}x{self.HEIGHT}+{left}+{top}")
         self.root.deiconify()
         self.root.lift()
@@ -127,15 +141,15 @@ class Dashboard:
 
         x1, y1 = self.MARGIN, self.MARGIN
         x2, y2 = self.WIDTH - self.MARGIN, self.HEIGHT - self.MARGIN
-        _rounded_rect(c, x1, y1, x2, y2, self.RADIUS, fill=_BG_CARD, outline=_BORDER)
+        _rounded_rect(c, x1, y1, x2, y2, self.RADIUS, fill=_BG_CARD, outline=_BORDER, width=self._s(1))
 
-        pad = 18
+        pad = self._s(18)
         y = y1 + pad
 
         c.create_text(x1 + pad, y, anchor="nw", text=self._plan, fill=_FG_PRIMARY, font=(_FONT, 11, "bold"))
         close = c.create_text(x2 - pad, y, anchor="ne", text="✕", fill=_FG_MUTED, font=(_FONT, 10))
         c.tag_bind(close, "<Button-1>", lambda _e: self.hide())
-        y += 28
+        y += self._s(28)
 
         if self._error:
             c.create_text(
@@ -146,7 +160,7 @@ class Dashboard:
             c.create_text(x1 + pad, y, anchor="nw", text="Loading usage...", fill=_FG_MUTED, font=(_FONT, 9))
         else:
             y = self._draw_metric(c, x1 + pad, y, x2 - pad, "Session (5h)", self._snapshot.session)
-            y += 10
+            y += self._s(10)
             self._draw_metric(c, x1 + pad, y, x2 - pad, "Weekly (7d)", self._snapshot.weekly)
 
         footer_y = y2 - pad
@@ -156,7 +170,7 @@ class Dashboard:
         c.create_text(x1 + pad, footer_y, anchor="sw", text=updated, fill=_FG_FAINT, font=(_FONT, 8))
 
         refresh = c.create_text(
-            x2 - pad - 38, footer_y, anchor="se", text="Refresh",
+            x2 - pad - self._s(38), footer_y, anchor="se", text="Refresh",
             fill=_LINK_REFRESH, font=(_FONT, 9, "underline"),
         )
         c.tag_bind(refresh, "<Button-1>", lambda _e: self._on_refresh())
@@ -173,16 +187,16 @@ class Dashboard:
 
         c.create_text(xl, y, anchor="nw", text=label, fill=_FG_SECONDARY, font=(_FONT, 9))
         c.create_text(xr, y, anchor="ne", text=f"{pct}%" if window else "n/a", fill=color, font=(_FONT, 9, "bold"))
-        y += 18
+        y += self._s(18)
 
-        bar_h = 8
+        bar_h = self._s(8)
         _rounded_rect(c, xl, y, xr, y + bar_h, bar_h / 2, fill=_TRACK, outline="")
         if window and pct > 0:
             fill_w = max((xr - xl) * min(pct, 100) / 100, bar_h)
             _rounded_rect(c, xl, y, xl + fill_w, y + bar_h, bar_h / 2, fill=color, outline="")
-        y += bar_h + 12
+        y += bar_h + self._s(12)
 
         detail = f"resets {format_countdown(window.resets_at)} · {format_clock(window.resets_at)}" if window else "no data"
         c.create_text(xl, y, anchor="nw", text=detail, fill=_FG_MUTED, font=(_FONT, 8))
-        y += 18
+        y += self._s(18)
         return y
