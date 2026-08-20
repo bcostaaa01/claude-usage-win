@@ -23,8 +23,11 @@ _FG_MUTED = "#8a8e94"
 _FG_FAINT = "#6f7378"
 _TRACK = "#2c2d31"
 _LINK_REFRESH = "#8ab4f8"
+_LINK_REFRESH_HOVER = "#b7d3fc"
 _LINK_QUIT = "#d77a7a"
+_LINK_QUIT_HOVER = "#eca3a3"
 _WARN = "#e6a51e"
+_HOVER_BG = "#303136"
 
 _FONT = "Segoe UI"
 
@@ -66,6 +69,10 @@ class Dashboard:
         self._plan = "Claude"
         self._error: str | None = None
         self._visible = False
+        self._loading = False
+        self._spin_angle = 0
+        self._spin_job: str | None = None
+        self._spinner_item: int | None = None
 
         display_dpi = dpi.get_dpi()
         self.scale = display_dpi / dpi.BASELINE_DPI
@@ -99,17 +106,83 @@ class Dashboard:
         """Scale a logical (96-DPI) pixel measurement to the real display."""
         return round(px * self.scale)
 
+    def _add_hover(
+        self,
+        c: tk.Canvas,
+        text_item: int,
+        *,
+        normal_fg: str,
+        hover_fg: str,
+        on_click: Callable[[], None],
+        pad: int | None = None,
+    ) -> None:
+        """Gives a text item a pill-shaped hover highlight, a brighter
+        color, and a hand cursor -- so it reads as a clickable button
+        rather than plain text, and gives a bigger, more forgiving hit
+        target than the glyph/text bounds alone."""
+
+        pad = self._s(6) if pad is None else pad
+        x1, y1, x2, y2 = c.bbox(text_item)
+        radius = (y2 - y1 + 2 * pad) / 2
+        bg = _rounded_rect(
+            c, x1 - pad, y1 - pad, x2 + pad, y2 + pad,
+            radius, fill=_BG_CARD, outline="",
+        )
+        c.tag_lower(bg, text_item)
+
+        def _enter(_e=None):
+            c.itemconfig(bg, fill=_HOVER_BG)
+            c.itemconfig(text_item, fill=hover_fg)
+            c.config(cursor="hand2")
+
+        def _leave(_e=None):
+            c.itemconfig(bg, fill=_BG_CARD)
+            c.itemconfig(text_item, fill=normal_fg)
+            c.config(cursor="")
+
+        for item in (bg, text_item):
+            c.tag_bind(item, "<Enter>", _enter)
+            c.tag_bind(item, "<Leave>", _leave)
+            c.tag_bind(item, "<Button-1>", lambda _e: on_click())
+
     # -- state updates (call only from the Tk thread) --------------------
 
     def set_snapshot(self, snapshot: UsageSnapshot, plan: str) -> None:
+        self._stop_spinner()
         self._snapshot = snapshot
         self._plan = plan
         self._error = None
         self._render()
 
     def set_error(self, message: str) -> None:
+        self._stop_spinner()
         self._error = message
         self._render()
+
+    # -- manual refresh spinner --------------------------------------------
+
+    def _start_refresh(self) -> None:
+        if self._loading:
+            return
+        self._loading = True
+        self._spin_angle = 0
+        self._render()
+        self._tick_spinner()
+        self._on_refresh()
+
+    def _tick_spinner(self) -> None:
+        if not self._loading or self._spinner_item is None:
+            return
+        self._spin_angle = (self._spin_angle + 30) % 360
+        self.canvas.itemconfig(self._spinner_item, start=self._spin_angle)
+        self._spin_job = self.root.after(60, self._tick_spinner)
+
+    def _stop_spinner(self) -> None:
+        self._loading = False
+        self._spinner_item = None
+        if self._spin_job is not None:
+            self.root.after_cancel(self._spin_job)
+            self._spin_job = None
 
     # -- visibility -------------------------------------------------------
 
@@ -148,7 +221,7 @@ class Dashboard:
 
         c.create_text(x1 + pad, y, anchor="nw", text=self._plan, fill=_FG_PRIMARY, font=(_FONT, 11, "bold"))
         close = c.create_text(x2 - pad, y, anchor="ne", text="✕", fill=_FG_MUTED, font=(_FONT, 10))
-        c.tag_bind(close, "<Button-1>", lambda _e: self.hide())
+        self._add_hover(c, close, normal_fg=_FG_MUTED, hover_fg=_FG_PRIMARY, on_click=self.hide)
         y += self._s(28)
 
         if self._error:
@@ -169,17 +242,31 @@ class Dashboard:
             updated = f"Updated {self._snapshot.fetched_at.astimezone().strftime('%H:%M:%S')}"
         c.create_text(x1 + pad, footer_y, anchor="sw", text=updated, fill=_FG_FAINT, font=(_FONT, 8))
 
-        refresh = c.create_text(
-            x2 - pad - self._s(38), footer_y, anchor="se", text="Refresh",
-            fill=_LINK_REFRESH, font=(_FONT, 9, "underline"),
-        )
-        c.tag_bind(refresh, "<Button-1>", lambda _e: self._on_refresh())
+        if self._loading:
+            label = c.create_text(
+                x2 - pad - self._s(38), footer_y, anchor="se", text="Refreshing…",
+                fill=_FG_FAINT, font=(_FONT, 9),
+            )
+            lx1, ly1, _lx2, ly2 = c.bbox(label)
+            r = self._s(5)
+            cx, cy = lx1 - self._s(8) - r, (ly1 + ly2) / 2
+            self._spinner_item = c.create_arc(
+                cx - r, cy - r, cx + r, cy + r,
+                start=self._spin_angle, extent=270, style="arc",
+                outline=_LINK_REFRESH, width=max(self._s(2), 2),
+            )
+        else:
+            refresh = c.create_text(
+                x2 - pad - self._s(38), footer_y, anchor="se", text="Refresh",
+                fill=_LINK_REFRESH, font=(_FONT, 9, "underline"),
+            )
+            self._add_hover(c, refresh, normal_fg=_LINK_REFRESH, hover_fg=_LINK_REFRESH_HOVER, on_click=self._start_refresh)
 
         quit_ = c.create_text(
             x2 - pad, footer_y, anchor="se", text="Quit",
             fill=_LINK_QUIT, font=(_FONT, 9, "underline"),
         )
-        c.tag_bind(quit_, "<Button-1>", lambda _e: self._on_quit())
+        self._add_hover(c, quit_, normal_fg=_LINK_QUIT, hover_fg=_LINK_QUIT_HOVER, on_click=self._on_quit)
 
     def _draw_metric(self, c: tk.Canvas, xl: int, y: int, xr: int, label: str, window: Window | None) -> int:
         pct = round(window.utilization_pct) if window else 0
